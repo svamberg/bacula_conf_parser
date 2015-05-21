@@ -16,7 +16,9 @@ my $name;
 
 %conf = &recurse_parsing($fh, 0);
 
-&print_conf( \%conf, '');
+print Dumper \%conf;
+
+# &print_conf( \%conf, '');
 
 
 sub print_conf {
@@ -57,8 +59,13 @@ sub recurse_parsing {
         }
 
         # assigne data => value in current hash
-        if ( $line =~ /(\w+)\s*\=\s*("?[^"]+"?)/) { 
-            $conf{ $1 } = $2;
+        if ( $line =~ /(\w+)\s*\=\s*("?[^"]+"?)/) {
+            # if the value is like an array (case of 'File', 'Run', ...)
+            if ( exists($conf{ $1 }) ) {
+                @{ $conf{ $1 } } = [ $conf{ $1 }, $2 ];
+            } else {
+                $conf{ $1 } = $2;
+            }
         }
 
         # closing curly bracket, go back from recursive sub
