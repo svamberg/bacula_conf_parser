@@ -26,12 +26,23 @@ sub print_conf {
     my $level = shift;
 
     foreach my $key ( sort(keys %$hash) ) {
-        if (ref $$hash{ $key } eq ref {}) {
+
+        if (ref $$hash{ $key } eq ref {}) { # value is hash
             print $level . $key . "\n";
             print_conf( $$hash{ $key }, $level . '    ' );
-        } else {
-            print $level . $key . ' = ' . $$hash{ $key } . "\n";
-        }
+            next;
+        } 
+
+        if (ref $$hash{ $key } eq ref []) { # value is array
+            print $level . $key . "\n";
+            foreach my $val ( @{ $$hash{ $key } } ) {
+                print $level . '    ' . $val . "\n";
+            }
+            next;
+        } 
+
+        # value is string
+        print $level . $key . ' = ' . $$hash{ $key } . "\n";
     }
 }
 
@@ -42,33 +53,36 @@ sub recurse_parsing {
 
     while (my $line = <$fh>) {
         $line = &clean_line($line);
-        if ( length($line) == 0 ) { next }
+        if ( length($line) == 0 ) { next; }
 
         # opening curly bracket with name, go in recursive sub
-        if ( $line =~ /^(\w+)\s*\{/ ) { 
+        if ( $line =~ /^(\w+)\s*\{/ ) {
+            my $key = $1;
 
             # special case for root level: ressources identified by their name
             if ( $level == 0 ) { 
                 my %temp = &recurse_parsing( $fh, $level + 1);
-                $conf{ $1 }{ $temp{ 'Name' } } = \%temp;
+                $conf{ $key }{ $temp{ 'Name' } } = \%temp;
 
             # else, it is a hash, no variables to overwrite
             } else {
-                $conf{ $1 } = { &recurse_parsing( $fh, $level + 1) };
+                $conf{ $key } = { &recurse_parsing( $fh, $level + 1) };
             }
         }
 
         # assigne data => value in current hash
         if ( $line =~ /([\w ]+?)\s*\=\s*("?[^"]+"?)/) {
-            # if the values are like an array (case of 'File', 'Run', ...)
-            if ( exists($conf{ $1 }) ) {
-                if (ref $conf{ $1 } eq ref []) {
-                    push @{ $conf{ $1 } }, $2 ;
+            my $key = $1;
+            my $value = $2;
+            
+            if ( exists($conf{ $key }) ) { # Already one?
+                if (ref $conf{ $key } eq ref []) { # like an array (case of 'File', 'Run', ...)?
+                    push @{ $conf{ $key } }, $value ;
                 } else {
-                    $conf{ $1 } = [ $2 ];
+                    $conf{ $key } =  [ $conf{ $key }, $value ];
                 }
             } else {
-                $conf{ $1 } = $2;
+                $conf{ $key } = $value;
             }
         }
 
