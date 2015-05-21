@@ -16,68 +16,58 @@ my $name;
 
 %conf = &recurse_parsing($fh, 0);
 
-print Dumper \%conf;
+&print_conf( \%conf, '');
 
-if (0) {
-    while (my $row = <$fh>) {
-        # cleaning
-        if ($row =~ m/^\s*#/) { next } # remove comments
-        if ($row =~ m/^\s*\n$/) { next } # remove blank lines
-        chomp $row;
 
-        # parsing
-        # get instructions type
-        if ($row =~ /^(\w+)\s*\{/) { # caracteres suivi de espace
-            $type = $1;
-            print "type = $type\n";
+sub print_conf {
+    my $hash = shift;
+    my $level = shift;
+
+    foreach my $key ( sort(keys %$hash) ) {
+        if (ref $$hash{ $key } eq ref {}) {
+            print $level . $key . "\n";
+            print_conf( $$hash{ $key }, $level . '    ' );
         } else {
-            # get name
-            if ($row =~ /Name\s*\=\s*("?[^"]+"?)/) { # get Name
-                $name = $1;
-            print "name = $name\n";
-            } else {
-                if ($row =~ /(\w+)\s*\=\s*("?[^"]+"?)/) { # get data
-                    print "data = $1\n";
-                    $conf{ $type } { $name } = $1;
-                } else {
-                    print "Error: $row\n";
-                }
-            }
+            print $level . $key . ' = ' . $$hash{ $key } . "\n";
         }
     }
 }
 
-
 sub recurse_parsing {
-    my $fh = shift;
-    my $level = shift;
+    my $fh = shift; #file handle
+    my $level = shift;  #recursing level. 0 = root
     my %conf;
 
     while (my $line = <$fh>) {
         $line = &clean_line($line);
         if ( length($line) == 0 ) { next }
 
-        if ( $line =~ /^(\w+)\s*\{/ ) { # opening curly bracket with name
-            print "$level OC $1 {\n";
-            if ( $level == 0 ) {
+        # opening curly bracket with name, go in recursive sub
+        if ( $line =~ /^(\w+)\s*\{/ ) { 
+
+            # special case for root level: ressources identified by their name
+            if ( $level == 0 ) { 
                 my %temp = &recurse_parsing( $fh, $level + 1);
                 $conf{ $1 }{ $temp{ 'Name' } } = \%temp;
+
+            # else, it is a hash, no variables to overwrite
             } else {
                 $conf{ $1 } = { &recurse_parsing( $fh, $level + 1) };
             }
         }
 
-        if ( $line =~ /(\w+)\s*\=\s*("?[^"]+"?)/) { # data = value
-            print "$level D  $1 = $2\n";
+        # assigne data => value in current hash
+        if ( $line =~ /(\w+)\s*\=\s*("?[^"]+"?)/) { 
             $conf{ $1 } = $2;
         }
 
-        if ( $line =~ /^}/) { # closing curly bracket
-            print "$level CC }\n";
+        # closing curly bracket, go back from recursive sub
+        if ( $line =~ /^}/) { 
             return %conf;
         }
     }
 
+    # last round.
     return %conf;
 }
 
