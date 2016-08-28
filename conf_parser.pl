@@ -50,45 +50,65 @@ sub recurse_parsing {
     my $fh = shift; #file handle
     my $level = shift;  #recursing level. 0 = root
     my %conf;
+    my @subfiles = ( "$ARGV[0]" );
+    my $next_file = 0;
+        
+    while ($#subfiles > -1) {
 
-    while (my $line = <$fh>) {
-        $line = &clean_line($line);
-        if ( length($line) == 0 ) { next; }
-
-        # opening curly bracket with name, go in recursive sub
-        if ( $line =~ /^(\w+)\s*\{/ ) {
-            my $key = $1;
-
-            # special case for root level: ressources identified by their name
-            if ( $level == 0 ) { 
-                my %temp = &recurse_parsing( $fh, $level + 1);
-                $conf{ $key }{ $temp{ 'Name' } } = \%temp;
-
-            # else, it is a hash, no variables to overwrite
-            } else {
-                $conf{ $key } = { &recurse_parsing( $fh, $level + 1) };
-            }
+        if ($next_file eq 1) {
+            close($fh);
+            open($fh, $subfiles[0]) or die "Could not open file '$subfiles[0]' $!";
+            $next_file = 0;
         }
 
-        # assigne data => value in current hash
-        if ( $line =~ /([\w ]+?)\s*\=\s*("?[^"]+"?)/) {
-            my $key = $1;
-            my $value = $2;
-            
-            if ( exists($conf{ $key }) ) { # Already one?
-                if (ref $conf{ $key } eq ref []) { # like an array (case of 'File', 'Run', ...)?
-                    push @{ $conf{ $key } }, $value ;
-                } else {
-                    $conf{ $key } =  [ $conf{ $key }, $value ];
+        if (my $line = <$fh>) {
+                $line = &clean_line($line);
+                if ( length($line) == 0 ) { next; }
+
+                # opening curly bracket with name, go in recursive sub
+                if ( $line =~ /^(\w+)\s*\{/ ) {
+                    my $key = $1;
+
+                    # special case for root level: ressources identified by their name
+                    if ( $level == 0 ) { 
+                        my %temp = &recurse_parsing( $fh, $level + 1);
+                        $conf{ $key }{ $temp{ 'Name' } } = \%temp;
+
+                    # else, it is a hash, no variables to overwrite
+                    } else {
+                        $conf{ $key } = { &recurse_parsing( $fh, $level + 1) };
+                    }
                 }
-            } else {
-                $conf{ $key } = $value;
-            }
-        }
 
-        # closing curly bracket, go back from recursive sub
-        if ( $line =~ /^}/) { 
-            return %conf;
+                # assigne data => value in current hash
+                if ( $line =~ /([\w ]+?)\s*\=\s*("?[^"]+"?)/) {
+                    my $key = $1;
+                    my $value = $2;
+                    
+                    if ( exists($conf{ $key }) ) { # Already one?
+                        if (ref $conf{ $key } eq ref []) { # like an array (case of 'File', 'Run', ...)?
+                            push @{ $conf{ $key } }, $value ;
+                        } else {
+                            $conf{ $key } =  [ $conf{ $key }, $value ];
+                        }
+                    } else {
+                        $conf{ $key } = $value;
+                    }
+                }
+
+                # closing curly bracket, go back from recursive sub
+                if ( $line =~ /^}/) { 
+                    return %conf;
+                }
+
+                # including config - TODO: sanitize inputs
+                if ( $line =~ /^@(.*)/) {
+                    push @subfiles, "$1";
+                }
+
+            } else {
+                shift @subfiles; # remove finished file, open another
+                $next_file = 1;
         }
     }
 
