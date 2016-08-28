@@ -3,6 +3,11 @@
 use warnings;
 use strict;
 use Data::Dumper;
+use JSON;
+
+# --- start of config section ---
+my $output_format="json"; 
+# --- end of config section ---
 
 # open bacula conf file
 my $filename = $ARGV[0];
@@ -18,8 +23,11 @@ my $name;
 
 # print Dumper \%conf;
 
-&print_conf( \%conf, '');
-
+if ($output_format eq "json") {
+    print JSON->new->pretty->encode(\%conf);
+} else {
+    &print_conf( \%conf, '');
+}
 
 sub print_conf {
     my $hash = shift;
