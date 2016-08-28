@@ -7,6 +7,7 @@ use JSON;
 
 # --- start of config section ---
 my $output_format="json"; 
+my $hide_password=1; # 0 = Password item will be printed; 1 = Password item will be hidden
 # --- end of config section ---
 
 # open bacula conf file
@@ -130,6 +131,7 @@ sub clean_line {
     chomp $line; # remove new line
     $line =~ s/^\s+//; # remove starting blanks
     $line =~ s/#.*$//; # remove comments
+    $line =~ s/^(\s*Password\s*=\s*).*$/$1"__password_is_hidden__"/ if $hide_password; # remove passwords
 
     return $line;
 }
