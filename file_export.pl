@@ -11,9 +11,7 @@ my %jobs = ();
 my %filesets = ();
 my %job_file = ();
 my %addr_file = ();
-
 my %clients = ();
-my %addr_file = ();
 
 foreach my $client (keys %{$data->{'Client'}}) {
         $clients{$client}{'addr'} = $$data{'Client'}{$client}{'Address'};
