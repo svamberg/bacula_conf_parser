@@ -132,6 +132,7 @@ sub clean_line {
     $line =~ s/^\s+//; # remove starting blanks
     $line =~ s/#.*$//; # remove comments
     $line =~ s/^(\s*Password\s*=\s*).*$/$1"__password_is_hidden__"/ if $hide_password; # remove passwords
+    $line =~ s/"//g;
 
     return $line;
 }
