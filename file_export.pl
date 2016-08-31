@@ -35,7 +35,7 @@ foreach my $job (keys %jobs) {
                 if (ref $filesets{$fileset} eq ref []) { # like an array (case of 'File', 'Run', ...)?
                         push @{$job_file{$job}}, @{$filesets{$fileset}};
                 } else {
-                        $job_file{$job} =  [ $filesets{$fileset} ];
+                        push @{$job_file{$job}},  [ $filesets{$fileset} ];
                 }
         }
 }
